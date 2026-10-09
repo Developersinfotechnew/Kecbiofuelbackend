@@ -61,6 +61,9 @@ app.use("/api/projects", require("./routes/projectRoutes"));
 app.use("/api/uploads", require("./routes/uploadRoutes"));
 app.use("/api/webinars", require("./routes/webinarRoutes")); // <-- NEW
 
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "KEC Biofuel API. See /api/health" });
+});
 
 app.use(notFound);
 app.use(errorHandler);
