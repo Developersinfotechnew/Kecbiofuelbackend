@@ -1,0 +1,35 @@
+[
+  {
+    "title": "Panipat 8 TPD CBG Project",
+    "section": "active",
+    "client": "KEC Biofuel",
+    "location": "Panipat",
+    "state": "Haryana",
+    "capacity": "8 TPD",
+    "scope": "PMC + EPC",
+    "technology": "Compressed Biogas (CBG)",
+    "stage": "Ground Breaking Completed",
+    "progress": 5,
+    "startDate": "2026-08-21",
+    "summary": "8 TPD Compressed Biogas project in Panipat, Haryana. Ground Breaking Ceremony held on 21 August 2026.",
+    "description": "KEC Biofuel marked the Ground Breaking Ceremony of its upcoming 8 TPD CBG project in Panipat, Haryana, moving the project from planning towards on-ground execution.",
+    "highlights": ["8 TPD CBG capacity", "Ground Breaking: 21 Aug 2026", "Integrated engineering and execution"],
+    "details": [{ "label": "Project Type", "value": "CBG" }],
+    "heroBanner": { "desktop": "/gallery/panipat6.jpeg", "mobile": "", "alt": "Panipat CBG project" },
+    "thumbnail": { "desktop": "/gallery/panipat6.jpeg", "mobile": "", "alt": "Panipat CBG project" },
+    "updates": [
+      {
+        "date": "2026-08-21",
+        "title": "Ground Breaking Ceremony",
+        "description": "The ground breaking ceremony marked the start of on-ground execution.",
+        "image": { "desktop": "/gallery/panipat10.jpeg", "mobile": "", "alt": "Ground breaking ceremony" }
+      }
+    ],
+    "seo": {
+      "metaTitle": "Panipat 8 TPD CBG Project | KEC Biofuel",
+      "metaDescription": "Track the 8 TPD Compressed Biogas (CBG) project in Panipat, Haryana by KEC Biofuel.",
+      "primaryKeywords": ["Panipat CBG Project", "CBG", "KEC Biofuel"]
+    },
+    "status": "published"
+  }
+]
