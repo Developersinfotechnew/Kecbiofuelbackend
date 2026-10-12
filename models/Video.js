@@ -68,6 +68,7 @@ const videoSchema = new mongoose.Schema(
     },
     thumbnail: {
       url: { type: String, required: [true, "Thumbnail image is required"] },
+      publicId: { type: String, default: "" }, // Cloudinary id, used to delete the old image
       altText: { type: String, trim: true, default: "" },
     },
     category: {

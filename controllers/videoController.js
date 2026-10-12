@@ -3,7 +3,9 @@ const path = require("path");
 const asyncHandler = require("express-async-handler");
 const Video = require("../models/Video");
 const ApiFeatures = require("../utils/apiFeatures");
+const cloudinary = require("../config/cloudinary");
 
+// Legacy: thumbnails uploaded before the Cloudinary move live here on disk.
 const THUMBNAIL_DIR = path.join(__dirname, "..", "uploads", "thumbnails");
 
 // The frontend can send tags / metaKeywords either as a real JSON array
@@ -38,21 +40,43 @@ function parseSeoField(value) {
   }
 }
 
-function buildThumbnailUrl(filename) {
-  return `/uploads/thumbnails/${filename}`;
+// Streams the in-memory multer file to Cloudinary.
+// Returns { url, publicId } where url is a full https URL (f_auto,q_auto on delivery).
+function uploadThumbnail(file) {
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    throw new Error("Cloudinary env vars are missing on the server");
+  }
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "kecbiofuel/thumbnails", resource_type: "image" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve({
+          url: result.secure_url.replace("/upload/", "/upload/f_auto,q_auto/"),
+          publicId: result.public_id,
+        });
+      }
+    );
+    stream.end(file.buffer);
+  });
 }
 
-// Removes a thumbnail file from disk given its stored /uploads/... URL.
-// Silently ignores missing files so deletes/updates never fail because of it.
-function deleteThumbnailFile(thumbnailUrl) {
-  if (!thumbnailUrl) return;
-  const filename = path.basename(thumbnailUrl);
-  const filePath = path.join(THUMBNAIL_DIR, filename);
-  fs.unlink(filePath, (err) => {
-    if (err && err.code !== "ENOENT") {
-      console.error(`Failed to delete thumbnail file ${filePath}:`, err.message);
+// Removes an old thumbnail. Cloudinary image if publicId is known,
+// otherwise a legacy local file. Never throws, so delete/update never fail because of it.
+async function deleteThumbnail(thumbnail) {
+  if (!thumbnail) return;
+  try {
+    if (thumbnail.publicId) {
+      await cloudinary.uploader.destroy(thumbnail.publicId);
+    } else if (thumbnail.url && thumbnail.url.startsWith("/uploads/")) {
+      const filePath = path.join(THUMBNAIL_DIR, path.basename(thumbnail.url));
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== "ENOENT") console.error(`Failed to delete ${filePath}:`, err.message);
+      });
     }
-  });
+  } catch (err) {
+    console.error("Failed to delete old thumbnail:", err.message);
+  }
 }
 
 // @desc    List published videos (public site consumption)
@@ -176,6 +200,8 @@ const createVideo = asyncHandler(async (req, res) => {
     seo.metaKeywords = parseArrayField(seo.metaKeywords);
   }
 
+  const uploaded = await uploadThumbnail(req.file);
+
   const video = await Video.create({
     title,
     slug,
@@ -190,7 +216,8 @@ const createVideo = asyncHandler(async (req, res) => {
     isFeatured: isFeatured === "true" || isFeatured === true,
     order: order !== undefined ? Number(order) : undefined,
     thumbnail: {
-      url: buildThumbnailUrl(req.file.filename),
+      url: uploaded.url,
+      publicId: uploaded.publicId,
       altText: req.body.thumbnailAlt || title,
     },
     seo,
@@ -248,12 +275,14 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   // Swap the thumbnail only if a new file was uploaded; delete the old one.
   if (req.file) {
-    const oldThumbnailUrl = video.thumbnail?.url;
+    const oldThumbnail = video.thumbnail ? { url: video.thumbnail.url, publicId: video.thumbnail.publicId } : null;
+    const uploaded = await uploadThumbnail(req.file);
     video.thumbnail = {
-      url: buildThumbnailUrl(req.file.filename),
+      url: uploaded.url,
+      publicId: uploaded.publicId,
       altText: req.body.thumbnailAlt || video.thumbnail?.altText || video.title,
     };
-    if (oldThumbnailUrl) deleteThumbnailFile(oldThumbnailUrl);
+    await deleteThumbnail(oldThumbnail);
   } else if (req.body.thumbnailAlt !== undefined) {
     video.thumbnail.altText = req.body.thumbnailAlt;
   }
@@ -297,7 +326,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new Error("Video not found");
   }
 
-  deleteThumbnailFile(video.thumbnail?.url);
+  await deleteThumbnail(video.thumbnail);
   await video.deleteOne();
 
   res.json({ success: true, data: { _id: req.params.id } });
